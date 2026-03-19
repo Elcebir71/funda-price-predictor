@@ -113,6 +113,6 @@ MIT License
 
 ## 👤 Author
 
-[Your Name]
-- LinkedIn: [Your Profile]
-- GitHub: [Your Profile]
+Hakan Sahin
+- LinkedIn: https://www.linkedin.com/in/hakan-sahin-610b27114/
+

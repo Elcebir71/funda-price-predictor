@@ -95,7 +95,7 @@ streamlit run app/streamlit_app.py
 
 ## 🛠️ Technologies
 
-- **Python 3.9+**
+- **Python 3.10+** (tested on 3.10, 3.11, 3.12)
 - **Data Collection**: BeautifulSoup, Selenium
 - **Data Processing**: Pandas, NumPy
 - **ML**: Scikit-learn, XGBoost

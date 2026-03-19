@@ -4,6 +4,16 @@ Follow these steps to get your Funda Price Predictor up and running.
 
 ## Step 1: Setup Environment
 
+**Check Python version first:**
+```bash
+python --version
+# Should be Python 3.10 or higher
+# If not: brew install python@3.11 (Mac) or download from python.org
+
+# Or use the checker script:
+python check_python_version.py
+```
+
 ```bash
 # Create project directory
 mkdir funda-price-predictor

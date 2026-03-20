@@ -1,300 +1,187 @@
 """
-Machine Learning Models for House Price Prediction
+ML models for Funda house price prediction
 """
 
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LinearRegression, Ridge, Lasso
+from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from xgboost import XGBRegressor
+from lightgbm import LGBMRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-import xgboost as xgb
 import joblib
-import matplotlib.pyplot as plt
-import seaborn as sns
+import warnings
+warnings.filterwarnings('ignore')
 
 
-class HousePriceModels:
-    def __init__(self):
-        self.models = {}
-        self.scaler = StandardScaler()
-        self.feature_names = None
-        self.results = {}
+def evaluate_model(y_true, y_pred, model_name):
+    """Calculate evaluation metrics"""
+    mae = mean_absolute_error(y_true, y_pred)
+    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    r2 = r2_score(y_true, y_pred)
+    mape = np.mean(np.abs((y_true - y_pred) / y_true)) * 100
     
-    def prepare_data(self, df, target_col='price'):
-        """
-        Prepare data for modeling
-        
-        Args:
-            df: Input DataFrame
-            target_col: Target variable column name
-            
-        Returns:
-            X, y, feature_names
-        """
-        # Drop non-numeric and non-feature columns
-        cols_to_drop = [
-            'url', 'scraped_at', 'address', 'location', 'postcode',
-            'description', 'house_type', 'construction_type', 'energy_label',
-            target_col
-        ]
-        
-        # Keep only columns that exist
-        cols_to_drop = [col for col in cols_to_drop if col in df.columns]
-        
-        # Features
-        X = df.drop(columns=cols_to_drop, errors='ignore')
-        
-        # Target
-        y = df[target_col]
-        
-        # Remove rows with missing target
-        mask = ~y.isna()
-        X = X[mask]
-        y = y[mask]
-        
-        # Fill missing features with median
-        X = X.fillna(X.median())
-        
-        self.feature_names = X.columns.tolist()
-        
-        print(f"Features: {len(self.feature_names)}")
-        print(f"Samples: {len(X)}")
-        print(f"Target range: {y.min():.0f} - {y.max():.0f}")
-        
-        return X, y
+    return {
+        'Model': model_name,
+        'MAE': f'€{mae:,.0f}',
+        'RMSE': f'€{rmse:,.0f}',
+        'R²': f'{r2:.3f}',
+        'MAPE': f'{mape:.2f}%'
+    }
+
+
+def train_models(X_train, X_test, y_train, y_test):
+    """Train and evaluate multiple models"""
     
-    def train_test_split_data(self, X, y, test_size=0.2, random_state=42):
-        """Split data into train and test sets"""
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=test_size, random_state=random_state
-        )
-        
-        # Scale features
-        X_train_scaled = self.scaler.fit_transform(X_train)
-        X_test_scaled = self.scaler.transform(X_test)
-        
-        return X_train_scaled, X_test_scaled, y_train, y_test
-    
-    def train_linear_models(self, X_train, y_train):
-        """Train linear regression models"""
-        print("\n[1/4] Training Linear Models...")
-        
-        # Linear Regression
-        lr = LinearRegression()
-        lr.fit(X_train, y_train)
-        self.models['linear_regression'] = lr
-        
-        # Ridge
-        ridge = Ridge(alpha=1.0)
-        ridge.fit(X_train, y_train)
-        self.models['ridge'] = ridge
-        
-        # Lasso
-        lasso = Lasso(alpha=1000)
-        lasso.fit(X_train, y_train)
-        self.models['lasso'] = lasso
-        
-        print("✅ Linear models trained")
-    
-    def train_random_forest(self, X_train, y_train):
-        """Train Random Forest"""
-        print("\n[2/4] Training Random Forest...")
-        
-        rf = RandomForestRegressor(
+    models = {
+        'Linear Regression': LinearRegression(),
+        'Ridge': Ridge(alpha=10),
+        'Random Forest': RandomForestRegressor(
             n_estimators=100,
             max_depth=15,
             min_samples_split=5,
             random_state=42,
             n_jobs=-1
-        )
-        rf.fit(X_train, y_train)
-        self.models['random_forest'] = rf
-        
-        print("✅ Random Forest trained")
-    
-    def train_gradient_boosting(self, X_train, y_train):
-        """Train Gradient Boosting"""
-        print("\n[3/4] Training Gradient Boosting...")
-        
-        gb = GradientBoostingRegressor(
+        ),
+        'XGBoost': XGBRegressor(
             n_estimators=100,
+            max_depth=7,
             learning_rate=0.1,
-            max_depth=5,
-            random_state=42
-        )
-        gb.fit(X_train, y_train)
-        self.models['gradient_boosting'] = gb
-        
-        print("✅ Gradient Boosting trained")
-    
-    def train_xgboost(self, X_train, y_train):
-        """Train XGBoost"""
-        print("\n[4/4] Training XGBoost...")
-        
-        xgb_model = xgb.XGBRegressor(
-            n_estimators=100,
-            learning_rate=0.1,
-            max_depth=5,
             random_state=42,
             n_jobs=-1
+        ),
+        'LightGBM': LGBMRegressor(
+            n_estimators=100,
+            max_depth=7,
+            learning_rate=0.1,
+            random_state=42,
+            n_jobs=-1,
+            verbose=-1
+        ),
+        'Gradient Boosting': GradientBoostingRegressor(
+            n_estimators=100,
+            max_depth=5,
+            learning_rate=0.1,
+            random_state=42
         )
-        xgb_model.fit(X_train, y_train)
-        self.models['xgboost'] = xgb_model
-        
-        print("✅ XGBoost trained")
+    }
     
-    def evaluate_models(self, X_test, y_test):
-        """Evaluate all trained models"""
-        print("\n" + "="*60)
-        print("MODEL EVALUATION")
-        print("="*60)
-        
-        results = []
-        
-        for name, model in self.models.items():
-            y_pred = model.predict(X_test)
-            
-            mae = mean_absolute_error(y_test, y_pred)
-            rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-            r2 = r2_score(y_test, y_pred)
-            
-            results.append({
-                'Model': name,
-                'MAE': mae,
-                'RMSE': rmse,
-                'R²': r2
-            })
-            
-            print(f"\n{name.upper()}")
-            print(f"  MAE:  €{mae:,.0f}")
-            print(f"  RMSE: €{rmse:,.0f}")
-            print(f"  R²:   {r2:.4f}")
-        
-        self.results = pd.DataFrame(results)
-        return self.results
+    results = []
+    trained_models = {}
     
-    def plot_results(self):
-        """Plot model comparison"""
-        if self.results.empty:
-            print("No results to plot. Run evaluate_models first.")
-            return
-        
-        fig, axes = plt.subplots(1, 3, figsize=(15, 4))
-        
-        # MAE
-        axes[0].barh(self.results['Model'], self.results['MAE'])
-        axes[0].set_xlabel('MAE (€)')
-        axes[0].set_title('Mean Absolute Error')
-        
-        # RMSE
-        axes[1].barh(self.results['Model'], self.results['RMSE'])
-        axes[1].set_xlabel('RMSE (€)')
-        axes[1].set_title('Root Mean Squared Error')
-        
-        # R²
-        axes[2].barh(self.results['Model'], self.results['R²'])
-        axes[2].set_xlabel('R² Score')
-        axes[2].set_title('R² Score')
-        axes[2].set_xlim([0, 1])
-        
-        plt.tight_layout()
-        plt.savefig('data/processed/model_comparison.png', dpi=300, bbox_inches='tight')
-        print("\n✅ Plot saved to data/processed/model_comparison.png")
-        plt.show()
+    print("🤖 Training models...\n")
     
-    def feature_importance(self, model_name='random_forest', top_n=15):
-        """Plot feature importance for tree-based models"""
-        if model_name not in self.models:
-            print(f"Model {model_name} not found.")
-            return
+    for name, model in models.items():
+        print(f"Training {name}...")
         
-        model = self.models[model_name]
+        # Train
+        model.fit(X_train, y_train)
         
-        if not hasattr(model, 'feature_importances_'):
-            print(f"Model {model_name} does not have feature_importances_")
-            return
+        # Predict
+        y_pred = model.predict(X_test)
         
+        # Evaluate
+        metrics = evaluate_model(y_test, y_pred, name)
+        results.append(metrics)
+        
+        # Cross-validation
+        cv_scores = cross_val_score(
+            model, X_train, y_train,
+            cv=5, scoring='r2', n_jobs=-1
+        )
+        
+        print(f"  ✅ R²: {metrics['R²']} | MAE: {metrics['MAE']} | CV R²: {cv_scores.mean():.3f} (±{cv_scores.std():.3f})")
+        
+        # Save model
+        trained_models[name] = model
+    
+    # Results dataframe
+    results_df = pd.DataFrame(results)
+    
+    return results_df, trained_models
+
+
+def get_feature_importance(model, feature_names, top_n=10):
+    """Extract feature importance"""
+    
+    if hasattr(model, 'feature_importances_'):
         importances = model.feature_importances_
-        indices = np.argsort(importances)[::-1][:top_n]
-        
-        plt.figure(figsize=(10, 6))
-        plt.barh(range(top_n), importances[indices])
-        plt.yticks(range(top_n), [self.feature_names[i] for i in indices])
-        plt.xlabel('Importance')
-        plt.title(f'Top {top_n} Features - {model_name}')
-        plt.gca().invert_yaxis()
-        plt.tight_layout()
-        plt.savefig(f'data/processed/feature_importance_{model_name}.png', dpi=300)
-        print(f"\n✅ Feature importance saved")
-        plt.show()
+    elif hasattr(model, 'coef_'):
+        importances = np.abs(model.coef_)
+    else:
+        return None
     
-    def save_best_model(self, model_name, filepath='models/best_model.pkl'):
-        """Save trained model to disk"""
-        if model_name not in self.models:
-            print(f"Model {model_name} not found.")
-            return
-        
-        import os
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        
-        # Save model and scaler
-        joblib.dump({
-            'model': self.models[model_name],
-            'scaler': self.scaler,
-            'feature_names': self.feature_names
-        }, filepath)
-        
-        print(f"✅ Model saved to {filepath}")
+    importance_df = pd.DataFrame({
+        'Feature': feature_names,
+        'Importance': importances
+    }).sort_values('Importance', ascending=False).head(top_n)
     
-    def predict(self, X_new, model_name='xgboost'):
-        """Make predictions on new data"""
-        if model_name not in self.models:
-            print(f"Model {model_name} not found.")
-            return None
-        
-        X_scaled = self.scaler.transform(X_new)
-        predictions = self.models[model_name].predict(X_scaled)
-        
-        return predictions
+    return importance_df
 
 
-def main():
-    """Example usage"""
-    # Load processed data
-    df = pd.read_csv('data/processed/funda_processed.csv')
+if __name__ == '__main__':
+    print("=" * 60)
+    print("🏠 FUNDA HOUSE PRICE PREDICTION - MODEL TRAINING")
+    print("=" * 60)
     
-    # Initialize model trainer
-    trainer = HousePriceModels()
+    # Load featured data
+    print("\n📂 Loading data...")
+    df = pd.read_csv('data/processed/funda_featured.csv')
+    print(f"   Data shape: {df.shape}")
     
-    # Prepare data
-    X, y = trainer.prepare_data(df)
-    X_train, X_test, y_train, y_test = trainer.train_test_split_data(X, y)
+    # Prepare features
+    from features import prepare_for_modeling
+    X, y, feature_names = prepare_for_modeling(df)
     
-    # Train all models
-    trainer.train_linear_models(X_train, y_train)
-    trainer.train_random_forest(X_train, y_train)
-    trainer.train_gradient_boosting(X_train, y_train)
-    trainer.train_xgboost(X_train, y_train)
+    print(f"   Features: {X.shape[1]}")
+    print(f"   Samples: {X.shape[0]}")
     
-    # Evaluate
-    results = trainer.evaluate_models(X_test, y_test)
-    print("\n" + "="*60)
-    print(results.to_string(index=False))
-    print("="*60)
+    # Train-test split
+    print("\n✂️  Splitting data (80/20)...")
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+    print(f"   Train: {X_train.shape[0]} samples")
+    print(f"   Test: {X_test.shape[0]} samples")
     
-    # Plot results
-    trainer.plot_results()
+    # Train models
+    print("\n" + "=" * 60)
+    results_df, trained_models = train_models(X_train, X_test, y_train, y_test)
     
-    # Feature importance
-    trainer.feature_importance('random_forest')
+    # Display results
+    print("\n" + "=" * 60)
+    print("📊 MODEL COMPARISON")
+    print("=" * 60)
+    print(results_df.to_string(index=False))
+    
+    # Best model
+    best_model_name = results_df.loc[results_df['R²'].str.replace('0.', '').astype(float).idxmax(), 'Model']
+    best_model = trained_models[best_model_name]
+    
+    print(f"\n🏆 Best model: {best_model_name}")
+    
+    # Feature importance (best model)
+    print(f"\n📈 Feature Importance ({best_model_name}):")
+    importance = get_feature_importance(best_model, feature_names, top_n=10)
+    if importance is not None:
+        print(importance.to_string(index=False))
     
     # Save best model
-    best_model = results.loc[results['R²'].idxmax(), 'Model']
-    print(f"\n🏆 Best model: {best_model}")
-    trainer.save_best_model(best_model)
-
-
-if __name__ == "__main__":
-    main()
+    print(f"\n💾 Saving models...")
+    joblib.dump(best_model, f'models/best_model_{best_model_name.replace(" ", "_").lower()}.pkl')
+    
+    # Save all models
+    for name, model in trained_models.items():
+        filename = f'models/{name.replace(" ", "_").lower()}.pkl'
+        joblib.dump(model, filename)
+    
+    print(f"   ✅ Saved {len(trained_models)} models to models/")
+    
+    # Save results
+    results_df.to_csv('models/model_comparison.csv', index=False)
+    print(f"   ✅ Saved comparison to models/model_comparison.csv")
+    
+    print("\n" + "=" * 60)
+    print("✅ MODEL TRAINING COMPLETE!")
+    print("=" * 60)

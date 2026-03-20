@@ -35,3 +35,4 @@ tqdm>=4.66.0
 # Jupyter
 jupyter>=1.0.0
 ipykernel>=6.27.0
+selenium>=4.15.0

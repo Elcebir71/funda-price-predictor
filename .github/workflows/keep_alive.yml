@@ -1,0 +1,12 @@
+name: Keep Streamlit Alive
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Her 6 saatte bir
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Streamlit
+        run: curl -s https://funda-price-predictor-8jrrmtbezmxhjwbtwczyqg.streamlit.app > /dev/null

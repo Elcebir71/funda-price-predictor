@@ -13,10 +13,11 @@ ENV/
 .ipynb_checkpoints
 *.ipynb_checkpoints/
 
-# Data files (don't commit large datasets)
+# Data files — never commit scraped/local datasets
 data/raw/*.csv
 data/processed/*.csv
 *.csv
+scraper_pid.txt
 
 # Models (optional - can be too large for git)
 models/*.pkl

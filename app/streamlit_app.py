@@ -184,23 +184,19 @@ elif page == "📊 Data Explorer":
 elif page == "🤖 Model Performance":
     st.title("🤖 Model Performance")
 
-    st.warning(
-        "⚠️ The previously published 0.990 R² result used "
-        "price_per_m2, a target-derived feature. Those metrics are "
-        "not presented as valid model performance. Retrain the models "
-        "with the current leakage-free feature pipeline."
+    st.info(
+        "The previously published 0.990 R² result used price_per_m2, "
+        "a target-derived feature. The table below shows the current "
+        "leakage-free benchmark after retraining."
     )
 
     comparison_path = 'models/model_comparison.csv'
 
     try:
         comparison = pd.read_csv(comparison_path)
-        st.subheader("Previous Model Comparison")
+        st.subheader("Current Leakage-Free Model Comparison")
         st.dataframe(comparison, use_container_width=True)
-        st.caption(
-            "Historical results only — they must not be interpreted as "
-            "leakage-free performance."
-        )
+        st.caption("Current benchmark results from the leakage-free feature pipeline.")
     except FileNotFoundError:
         st.info("No model comparison file is available yet.")
 

@@ -76,6 +76,21 @@ Visit: http://localhost:8501
 
 ---
 
+## 📊 Current Leakage-Free Benchmark
+
+The models were retrained after removing the target-derived `price_per_m2` feature. On the current hold-out test set:
+
+| Model | R² | MAE | RMSE |
+|---|---:|---:|---:|
+| Linear Regression | 0.800 | €95,015 | €124,693 |
+| Ridge | 0.800 | €92,325 | €124,724 |
+| Random Forest | 0.790 | €89,336 | €127,736 |
+| XGBoost | 0.785 | €89,678 | €129,119 |
+| LightGBM | 0.798 | €87,212 | €125,281 |
+| Gradient Boosting | 0.788 | €87,964 | €128,110 |
+
+These are leakage-free benchmark results from the current committed model comparison. They should not be compared directly with the previously published 0.990 R² result, which used target-derived information.
+
 ## 📈 Features
 
 ### 🏠 Price Predictor

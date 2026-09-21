@@ -1,46 +1,35 @@
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
 *.so
 .Python
 venv/
 env/
-ENV/
-.venv
+.venv/
 
-# Jupyter Notebook
-.ipynb_checkpoints
-*.ipynb_checkpoints/
+# Jupyter
+.ipynb_checkpoints/
 
-# Data files — never commit scraped/local datasets
-data/raw/*.csv
-data/processed/*.csv
+# Scraped and local datasets - never commit
+data/
 *.csv
+!models/model_comparison.csv
 scraper_pid.txt
+nohup.out
 
-# Models (optional - can be too large for git)
-models/*.pkl
-models/*.joblib
+# Secrets and environment
+.env
+.streamlit/secrets.toml
 
-# IDE
+# IDE and OS
 .vscode/
 .idea/
 *.swp
-*.swo
-*~
-
-# OS
 .DS_Store
 Thumbs.db
 
-# Logs
+# Logs and build output
 *.log
-
-# Environment variables
-.env
-
-# Distribution / packaging
 build/
 dist/
 *.egg-info/
